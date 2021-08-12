@@ -1,17 +1,9 @@
-from dataclasses import dataclass
 import math
-from enum import Enum
-from typing import List
 import gym
 import numpy as np
-from dungeon import DungeonGenerator, TileKind
+from dungeon import DungeonGenerator
 from map import Map, Move
 from agent import Agent, Position, Orientation
-
-
-
-
-
 
 
 class Dungeon(gym.Env):
@@ -40,22 +32,22 @@ class Dungeon(gym.Env):
         self._map: Map = None
         self._explored_area = None
         self._agent_pos = None
-
-
-    
-        # The main API methods that users of this class need to know are:
-        #     step
-        #     reset
-        #     render
-        #     close
-        #     seed
-
-        # And set the following attributes:
-        #     action_space: The Space object corresponding to valid actions
-        #     observation_space: The Space object corresponding to valid observations
-        #     reward_range: A tuple corresponding to the min and max possible rewards
+        self._step = 0
 
     def reset(self):
+
+        """Resets the environment to an initial state and returns an initial
+        observation.
+
+        Note that this function should not reset the environment's random
+        number generator(s); random variables in the environment's state should
+        be sampled independently between multiple calls to `reset()`. In other
+        words, each call of `reset()` should yield an environment suitable for
+        a new episode, independent of previous episodes.
+
+        Returns:
+            observation (object): the initial observation.
+        """
         # generate level
 
         self._gen.gen_level()
@@ -65,22 +57,96 @@ class Dungeon(gym.Env):
         x, y = self._map.get_random_free_position()
         self._agent = Agent(Position(x, y), Orientation(np.random.randint(4)), vision_radius=self.vision_radius, vision_angle=math.pi / 2)
         _ = self._map.update_explored_area(self._agent, align_with_map=True)
+        self._step = 1
 
-        obs = self._map.get_observation(self._agent, self.observation_size)
-        return obs
+        observation = self._map.get_observation(self._agent, self.observation_size)
+        return observation
 
     def step(self, action: Move):
-        obs, explored, success = self._map.step(self._agent, action, self.observation_size)
-        return obs, explored, success
+        
+        """Run one timestep of the environment's dynamics. When end of
+        episode is reached, you are responsible for calling `reset()`
+        to reset this environment's state.
+
+        Accepts an action and returns a tuple (observation, reward, done, info).
+
+        Args:
+            action (object): an action provided by the agent
+
+        Returns:
+            observation (object): agent's observation of the current environment
+            reward (float) : amount of reward returned after previous action
+            done (bool): whether the episode has ended, in which case further step() calls will return undefined results
+            info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
+        """
+        observation, explored, done = self._map.step(self._agent, action, self.observation_size)
+
+        # set reward as a number of new explored cells
+        reward = explored
+        info = {
+            "step": self._step,
+            "total_cells": self._map._visible_cells,
+            "total_explored": self._map._total_explored,
+            "new_explored": explored,
+            "avg_explored_per_step": self._map._total_explored / self._step
+        }
+        self._step += 1
+
+        return observation, reward, done, info
+
+
+    def render(self, mode='human'):
+        """Renders the environment.
+
+        The set of supported modes varies per environment. (And some
+        environments do not support rendering at all.) By convention,
+        if mode is:
+
+        - human: render to the current display or terminal and
+          return nothing. Usually for human consumption.
+        - rgb_array: Return an numpy.ndarray with shape (x, y, 3),
+          representing RGB values for an x-by-y pixel image, suitable
+          for turning into a video.
+        - ansi: Return a string (str) or StringIO.StringIO containing a
+          terminal-style text representation. The text can include newlines
+          and ANSI escape sequences (e.g. for colors).
+
+        Note:
+            Make sure that your class's metadata 'render.modes' key includes
+              the list of supported modes. It's recommended to call super()
+              in implementations to use the functionality of this method.
+
+        Args:
+            mode (str): the mode to render with
+
+        Example:
+
+        class MyEnv(Env):
+            metadata = {'render.modes': ['human', 'rgb_array']}
+
+            def render(self, mode='human'):
+                if mode == 'rgb_array':
+                    return np.array(...) # return RGB frame suitable for video
+                elif mode == 'human':
+                    ... # pop up a window and render
+                else:
+                    super(MyEnv, self).render(mode=mode) # just raise an exception
+        """
+        if mode == "rgb_array":
+            raise NotImplementedError
+        elif mode == "human":
+            print(f"Step {self._step}")
+            print(self._map.show(self._agent))
+            print(f"Explored: {self._map._total_explored}/{self._map._visible_cells} cells ({self._map._total_explored / self._map._visible_cells * 100:.2f}%)")
 
 
 if __name__ == "__main__":
-    env = Dungeon(32, 32)
+    env = Dungeon(16, 16, min_room_xy=7, max_room_xy=14)
     obs = env.reset()
-    for _ in range(100):
-        action = np.random.choice(3)
-        obs, explored, success = env.step(action)
-        if success:
-            break
 
-        print(env._map.explored_area)
+    for _ in range(10000):
+        action = np.random.choice(3)
+        obs, reward, done, info = env.step(action)
+        env.render("human")
+        if done:
+            break

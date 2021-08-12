@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 import math
@@ -9,13 +10,12 @@ from agent import Agent, Move, Orientation, Position
 from dungeon import TileKind
 
 
-
-
-
 TILES = {
     TileKind.OCCUPIED: "█",
     TileKind.FREE: ".",
-    TileKind.UNKNOWN: "×"
+    TileKind.UNKNOWN: "×",
+    TileKind.AGENT: "O",
+    TileKind.EXPLORED: "_"
 }
 
 @dataclass
@@ -49,23 +49,22 @@ class Map:
     def __str__(self):
         return self._render
 
+    def show(self, agent: Agent):
+        tiles = self.tiles.copy()
+        tiles = np.where(self._explored_area, tiles, TileKind.UNKNOWN)
+        tiles[agent.position.y, agent.position.x] = TileKind.AGENT
+        render = '\n'.join([''.join([TILES[TileKind(tile)] for tile in row]) for row in tiles])
+        return render
+
+
     @property
     def explored_area(self):
         return '\n'.join([''.join(row) for row in np.where(self._explored_area, ".", "×")])
 
-    def reset(self, observation_size):
-
-        x, y = self.get_random_free_position()
-        agent = Agent(Position(x, y), Orientation(np.random.randint(4)))
-
-        self.update_explored_area(agent)
-        obs = self.get_observation(agent, observation_size)
-        return obs
-
 
     def step(self, agent: Agent, move: Move, observation_size: int):
-        position = agent.position
-        moded = False
+        position = deepcopy(agent.position)
+        moved = False
         if move == Move.FORWARD:
             if agent.orientation == Orientation.EAST:
                 position.x += 1
@@ -77,10 +76,16 @@ class Map:
                 position.y -= 1
             
             # check validity
-            if self.tiles[position.x, position.y] == TileKind.FREE:
-                agent.position = position
-                moved = True
-            else:
+            try:
+                if self.tiles[position.y, position.x] == TileKind.FREE:
+                    agent.position = position
+                    moved = True
+                else:
+                    moved = False
+            except IndexError as err:
+                # print(self.show(agent))
+                # print(agent.position)
+                # raise err
                 moved = False
 
         else:
@@ -93,7 +98,6 @@ class Map:
             moved = True
 
         explored = self.update_explored_area(agent, align_with_map=True)
-        self._total_explored += explored
         success = self._total_explored == self._visible_cells
         obs = self.get_observation(agent, observation_size)
         return obs, explored, success
@@ -101,7 +105,7 @@ class Map:
 
     def get_random_free_position(self) -> Tuple[int, int]:
 
-        xs, ys = np.nonzero(np.where(self.tiles != TileKind.UNKNOWN, True, False))
+        ys, xs = np.nonzero(np.where(self.tiles == TileKind.FREE, True, False))
         idx = np.random.randint(len(xs))
         return xs[idx], ys[idx]
 
@@ -145,6 +149,8 @@ class Map:
             self._explored_area *= np.where(self.tiles != TileKind.UNKNOWN, True, False)
 
         new_explored = np.sum(self._explored_area)
+
+        self._total_explored = new_explored
         return new_explored - old_explored
 
 
@@ -169,7 +175,5 @@ class Map:
         # rotate
         observation[0] = np.rot90(observation[0], k=-agent.orientation + 1)
         observation[1] = np.rot90(observation[1], k=-agent.orientation + 1)
-
-
 
         return Map(tiles=observation[0], explored_area=observation[1])

@@ -12,36 +12,22 @@
 # work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 from __future__ import print_function
-from enum import Enum, IntEnum
+from enum import IntEnum
 import random
-from typing import List
-
 
 
 class TileKind(IntEnum):
     UNKNOWN = 0
     FREE = 1
     OCCUPIED = 2
-    UNREACHABLE = 3
-
-
-# class Map:
-#     def __init__(self, tiles: List[List[TileKind]]):
-#         self.tiles = tiles
-
-#     def __str__(self):
-#         rows = [''.join([CHARACTER_TILES[tile] for tile in row]) for row in self.tiles]
-#         return '\n'.join(rows)
-
-CHARACTER_TILES = {TileKind.UNKNOWN: '/',
-                   TileKind.FREE: '.',
-                   TileKind.OCCUPIED: '#',}
+    AGENT = 3
+    EXPLORED = 4
 
 
 class DungeonGenerator():
     def __init__(self, width=64, height=64, max_rooms=25, min_room_xy=10,
                  max_room_xy=25, rooms_overlap=False, random_connections=1,
-                 random_spurs=3, tiles=CHARACTER_TILES):
+                 random_spurs=3):
         self.width = width
         self.height = height
         self.max_rooms = max_rooms
@@ -50,11 +36,9 @@ class DungeonGenerator():
         self.rooms_overlap = rooms_overlap
         self.random_connections = random_connections
         self.random_spurs = random_spurs
-        self.tiles = CHARACTER_TILES
         self.level = []
         self.room_list = []
         self.corridor_list = []
-        self.tiles_level = []
 
     def gen_room(self):
         x, y, w, h = 0, 0, 0, 0
@@ -303,17 +287,7 @@ class DungeonGenerator():
                     if self.level[row + 1][col + 1] == TileKind.UNKNOWN:
                         self.level[row + 1][col + 1] = TileKind.OCCUPIED
 
-    def show(self):
-        print('Room List: ', self.room_list)
-        print('\nCorridor List: ', self.corridor_list)
-
-        print(Map(self.level))
-
-        #[print(row) for row in self.tiles_level]
-
 
 if __name__ == '__main__':
     gen = DungeonGenerator()
     gen.gen_level()
-    # gen.gen_tiles_level()
-    gen.show()
