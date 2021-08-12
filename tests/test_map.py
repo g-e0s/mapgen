@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from agent import Agent, Position, Orientation
+from agent import Agent, Move, Position, Orientation
 from map import Map, TileKind, TILES, Slice
 
 
@@ -106,6 +106,37 @@ def test_get_explored_area(orientation):
     print(map.explored_area)
     print(obs.explored_area)
     print(obs)
+
+
+    assert obs.explored_area == expected_obs
+
+
+def test_rotation():
+    map = Map(sample_map_array)
+    agent = Agent(Position(x=12, y=2), Orientation(0), vision_radius=3, vision_angle=np.deg2rad(100.0))
+
+    map.update_explored_area(agent)
+
+    total_explored = 0
+
+    for _ in range(3):
+        obs, explored, _ = map.step(agent, Move.TURN_LEFT, observation_size=7)
+        total_explored += explored
+        print(agent.orientation)
+
+    expected_obs = \
+    """×××.×××
+       ×.....×
+       ×.....×
+       ×......
+       ××...××
+       ××...××
+       ×××××××""".replace(' ', '')
+
+    print(map.explored_area)
+    print(obs.explored_area)
+    print(obs)
+    print(total_explored)
 
 
     assert obs.explored_area == expected_obs

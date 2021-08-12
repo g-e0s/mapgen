@@ -47,34 +47,7 @@ class Agent:
 
     @property
     def visible_area(self) -> np.ndarray:
-        return np.rot90(self._visible_area_canonical, k=self.orientation)
-
-    # def step(self, move: Move, map: Map) -> bool:
-    #     position = self.position
-    #     if move == Move.FORWARD:
-    #         if self.orientation == Orientation.EAST:
-    #             position.x += 1
-    #         elif self.orientation == Orientation.NORTH:
-    #             position.y += 1
-    #         if self.orientation == Orientation.WEST:
-    #             position.x -= 1
-    #         if self.orientation == Orientation.SOUTH:
-    #             position.y -= 1
-            
-    #         # check validity
-    #         if map.tiles[position.x, position.y] == TileKind.FREE:
-    #             self.position = position
-    #             return True
-    #         else:
-    #             return False
-
-    #     else:
-    #         orientation = self.orientation + move
-    #         if orientation > Orientation.SOUTH:
-    #             orientation = Orientation.EAST
-    #         elif orientation < Orientation.EAST:
-    #             orientation = Orientation.SOUTH
-    #         return True
+        return np.rot90(self._visible_area_canonical, k=int(self.orientation))
 
 
     def _construct_canonical_visible_area(self) -> np.ndarray:

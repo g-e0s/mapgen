@@ -12,31 +12,30 @@
 # work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 from __future__ import print_function
-from enum import Enum
+from enum import Enum, IntEnum
 import random
 from typing import List
 
 
 
-class TileKind(Enum):
+class TileKind(IntEnum):
     UNKNOWN = 0
     FREE = 1
     OCCUPIED = 2
-    AGENT = 3
+    UNREACHABLE = 3
 
 
-class Map:
-    def __init__(self, tiles: List[List[TileKind]]):
-        self.tiles = tiles
+# class Map:
+#     def __init__(self, tiles: List[List[TileKind]]):
+#         self.tiles = tiles
 
-    def __str__(self):
-        rows = [''.join([CHARACTER_TILES[tile] for tile in row]) for row in self.tiles]
-        return '\n'.join(rows)
+#     def __str__(self):
+#         rows = [''.join([CHARACTER_TILES[tile] for tile in row]) for row in self.tiles]
+#         return '\n'.join(rows)
 
 CHARACTER_TILES = {TileKind.UNKNOWN: '/',
                    TileKind.FREE: '.',
-                   TileKind.OCCUPIED: '#',
-                   TileKind.AGENT: 'O'}
+                   TileKind.OCCUPIED: '#',}
 
 
 class DungeonGenerator():
@@ -303,21 +302,6 @@ class DungeonGenerator():
 
                     if self.level[row + 1][col + 1] == TileKind.UNKNOWN:
                         self.level[row + 1][col + 1] = TileKind.OCCUPIED
-
-    # def gen_tiles_level(self):
-
-    #     for row_num, row in enumerate(self.level):
-    #         tmp_tiles = []
-
-    #         for col_num, col in enumerate(row):
-    #             if col == TileKind.UNKNOWN:
-    #                 tmp_tiles.append(self.tiles[TileKind.UNKNOWN])
-    #             if col == TileKind.FREE:
-    #                 tmp_tiles.append(self.tiles[TileKind.FREE])
-    #             if col == TileKind.OCCUPIED:
-    #                 tmp_tiles.append(self.tiles[TileKind.OCCUPIED])
-
-    #         self.tiles_level.append(''.join(tmp_tiles))
 
     def show(self):
         print('Room List: ', self.room_list)

@@ -6,13 +6,10 @@ from typing import List, Tuple
 import numpy as np
 
 from agent import Agent, Move, Orientation, Position
+from dungeon import TileKind
 
 
-class TileKind(IntEnum):
-    UNKNOWN = 0
-    FREE = 1
-    OCCUPIED = 2
-    UNREACHABLE = 3
+
 
 
 TILES = {
@@ -42,6 +39,9 @@ class Map:
 
         self._render = '\n'.join([''.join([TILES[TileKind(tile)] for tile in row]) for row in tiles])
 
+        self._visible_cells = np.sum(np.where(self.tiles != TileKind.UNKNOWN, True, False))
+        self._total_explored = 0
+
     @property
     def size(self):
         return self.tiles.shape
@@ -53,9 +53,19 @@ class Map:
     def explored_area(self):
         return '\n'.join([''.join(row) for row in np.where(self._explored_area, ".", "×")])
 
+    def reset(self, observation_size):
 
-    def step(self, agent: Agent, move: Move) -> bool:
+        x, y = self.get_random_free_position()
+        agent = Agent(Position(x, y), Orientation(np.random.randint(4)))
+
+        self.update_explored_area(agent)
+        obs = self.get_observation(agent, observation_size)
+        return obs
+
+
+    def step(self, agent: Agent, move: Move, observation_size: int):
         position = agent.position
+        moded = False
         if move == Move.FORWARD:
             if agent.orientation == Orientation.EAST:
                 position.x += 1
@@ -67,11 +77,11 @@ class Map:
                 position.y -= 1
             
             # check validity
-            if map.tiles[position.x, position.y] == TileKind.FREE:
+            if self.tiles[position.x, position.y] == TileKind.FREE:
                 agent.position = position
-                return True
+                moved = True
             else:
-                return False
+                moved = False
 
         else:
             orientation = agent.orientation + move
@@ -79,12 +89,19 @@ class Map:
                 orientation = Orientation.EAST
             elif orientation < Orientation.EAST:
                 orientation = Orientation.SOUTH
-            return True
+            agent.orientation = orientation
+            moved = True
+
+        explored = self.update_explored_area(agent, align_with_map=True)
+        self._total_explored += explored
+        success = self._total_explored == self._visible_cells
+        obs = self.get_observation(agent, observation_size)
+        return obs, explored, success
 
 
     def get_random_free_position(self) -> Tuple[int, int]:
 
-        xs, ys = np.nonzero(self._map)
+        xs, ys = np.nonzero(np.where(self.tiles != TileKind.UNKNOWN, True, False))
         idx = np.random.randint(len(xs))
         return xs[idx], ys[idx]
 
@@ -108,7 +125,7 @@ class Map:
         return map_slice, observation_slice
 
 
-    def update_explored_area(self, agent: Agent) -> None:
+    def update_explored_area(self, agent: Agent, align_with_map: bool = False) -> int:
 
         map_slice, obs_slice = self.get_map_slice_coords(agent, agent.visible_area.shape[0])
 
@@ -118,7 +135,17 @@ class Map:
 
         # add new observation
         x_min, x_max, y_min, y_max = map_slice
-        self._explored_area[y_min : y_max, x_min : x_max] += vis_area_slice
+
+        old_explored = np.sum(self._explored_area)
+        self._explored_area[y_min : y_max, x_min : x_max] += vis_area_slice.astype(bool)
+
+
+        # align with map
+        if align_with_map:
+            self._explored_area *= np.where(self.tiles != TileKind.UNKNOWN, True, False)
+
+        new_explored = np.sum(self._explored_area)
+        return new_explored - old_explored
 
 
 
