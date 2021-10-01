@@ -6,8 +6,8 @@ from typing import List, Tuple
 
 import numpy as np
 
-from agent import Agent, Move, Orientation, Position
-from dungeon import TileKind
+from mapgen.agent import Agent, Move, Orientation, Position
+from mapgen.dungeon import TileKind
 
 
 TILES = {

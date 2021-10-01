@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from agent import Agent, Move, Position, Orientation
-from map import Map, TileKind, TILES, Slice
+from mapgen.agent import Agent, Move, Position, Orientation
+from mapgen.map import Map, TileKind, TILES, Slice
 
 
 sample_map = \
