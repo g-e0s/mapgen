@@ -1,11 +1,9 @@
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 import math
-import pytest
 from typing import List, Tuple
 
 import numpy as np
-#from map import Map, TileKind
 
 
 @dataclass

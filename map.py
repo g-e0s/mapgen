@@ -18,6 +18,14 @@ TILES = {
     TileKind.EXPLORED: "_"
 }
 
+TILES_COLORS = {
+    TileKind.OCCUPIED: "#674d3c",
+    TileKind.FREE: "#d9ad7c",
+    TileKind.UNKNOWN: "#a2836e",
+    TileKind.AGENT: "#c83349",
+    TileKind.EXPLORED: (0,0,0)
+}
+
 @dataclass
 class Slice:
     x_min: int
@@ -56,6 +64,23 @@ class Map:
         render = '\n'.join([''.join([TILES[TileKind(tile)] for tile in row]) for row in tiles])
         return render
 
+    def render(self, agent: Agent):
+        #h, w = self.tiles.shape
+        #frame = np.zeros(shape=(h, w, 3), dtype=np.uint8)
+        #frame = np.where(self.tiles == TileKind.OCCUPIED, 1, frame)
+        frame = np.array([[self.hex2rgb(TILES_COLORS[tile]) for tile in row] for row in self.tiles])
+
+
+        #frame = np.where(self.tiles == TileKind.OCCUPIED, self.hex2rgb(TILES_COLORS[TileKind.OCCUPIED]), frame)
+        #frame = np.where(self.tiles == TileKind.FREE, self.hex2rgb(TILES_COLORS[TileKind.FREE]), frame)
+        frame[agent.position.y, agent.position.x] = self.hex2rgb(TILES_COLORS[TileKind.AGENT])
+        frame = 0.7 * frame + 0.3 * np.tile((1 - self._explored_area * (self.tiles!=TileKind.UNKNOWN)) * 200, (3, 1, 1)).transpose((1,2,0))
+        return frame.astype(np.uint8)
+
+    @staticmethod
+    def hex2rgb(hex: str) -> Tuple[int]:
+        h = hex.lstrip("#")
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
     @property
     def explored_area(self):
