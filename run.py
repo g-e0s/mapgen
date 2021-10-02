@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     frames = []
 
-    for _ in range(1000):
+    for _ in range(200):
         action = np.random.choice(3)
 
         frame = Image.fromarray(env._map.render(env._agent)).convert('RGB').resize((500, 500), Image.NEAREST).quantize()

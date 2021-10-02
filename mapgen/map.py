@@ -23,7 +23,7 @@ TILES_COLORS = {
     TileKind.FREE: "#d9ad7c",
     TileKind.UNKNOWN: "#a2836e",
     TileKind.AGENT: "#c83349",
-    TileKind.EXPLORED: (0,0,0)
+    TileKind.EXPLORED: "#454140"
 }
 
 @dataclass
@@ -40,10 +40,12 @@ class Map:
     def __init__(
         self,
         tiles: List[List[TileKind]],
-        explored_area: List[List[bool]] = None
+        explored_area: List[List[bool]] = None,
+        trajectory: List[List[bool]] = None
     ):
         self.tiles = np.array(tiles).astype(int)
         self._explored_area = np.array(explored_area) if explored_area is not None else np.zeros_like(self.tiles, dtype=bool)
+        self._trajectory = np.array(trajectory) if trajectory is not None else np.zeros_like(self.tiles, dtype=bool)
 
         self._render = '\n'.join([''.join([TILES[TileKind(tile)] for tile in row]) for row in tiles])
 
@@ -57,24 +59,25 @@ class Map:
     def __str__(self):
         return self._render
 
-    def show(self, agent: Agent):
+    def show(self, agent: Agent = None):
         tiles = self.tiles.copy()
         tiles = np.where(self._explored_area, tiles, TileKind.UNKNOWN)
-        tiles[agent.position.y, agent.position.x] = TileKind.AGENT
+        if agent:
+            tiles[agent.position.y, agent.position.x] = TileKind.AGENT
         render = '\n'.join([''.join([TILES[TileKind(tile)] for tile in row]) for row in tiles])
         return render
 
     def render(self, agent: Agent):
-        #h, w = self.tiles.shape
-        #frame = np.zeros(shape=(h, w, 3), dtype=np.uint8)
-        #frame = np.where(self.tiles == TileKind.OCCUPIED, 1, frame)
         frame = np.array([[self.hex2rgb(TILES_COLORS[tile]) for tile in row] for row in self.tiles])
-
-
-        #frame = np.where(self.tiles == TileKind.OCCUPIED, self.hex2rgb(TILES_COLORS[TileKind.OCCUPIED]), frame)
-        #frame = np.where(self.tiles == TileKind.FREE, self.hex2rgb(TILES_COLORS[TileKind.FREE]), frame)
-        frame[agent.position.y, agent.position.x] = self.hex2rgb(TILES_COLORS[TileKind.AGENT])
         frame = 0.7 * frame + 0.3 * np.tile((1 - self._explored_area * (self.tiles!=TileKind.UNKNOWN)) * 200, (3, 1, 1)).transpose((1,2,0))
+
+        # plot trajectory
+        for y, x in zip(*np.nonzero(self._trajectory)):
+            frame[y, x] = self.hex2rgb(TILES_COLORS[TileKind.EXPLORED])
+        
+        frame[agent.position.y, agent.position.x] = self.hex2rgb(TILES_COLORS[TileKind.AGENT])
+
+
         return frame.astype(np.uint8)
 
     @staticmethod
@@ -94,11 +97,11 @@ class Map:
             if agent.orientation == Orientation.EAST:
                 position.x += 1
             elif agent.orientation == Orientation.NORTH:
-                position.y += 1
+                position.y -= 1
             elif agent.orientation == Orientation.WEST:
                 position.x -= 1
             elif agent.orientation == Orientation.SOUTH:
-                position.y -= 1
+                position.y += 1
             
             # check validity
             try:
@@ -108,9 +111,6 @@ class Map:
                 else:
                     moved = False
             except IndexError as err:
-                # print(self.show(agent))
-                # print(agent.position)
-                # raise err
                 moved = False
 
         else:
@@ -125,7 +125,7 @@ class Map:
         explored = self.update_explored_area(agent, align_with_map=True)
         success = self._total_explored == self._visible_cells
         obs = self.get_observation(agent, observation_size)
-        return obs, explored, success
+        return obs, explored, success, moved
 
 
     def get_random_free_position(self) -> Tuple[int, int]:
@@ -153,8 +153,9 @@ class Map:
 
         return map_slice, observation_slice
 
-
     def update_explored_area(self, agent: Agent, align_with_map: bool = False) -> int:
+
+        self._trajectory[agent.position.y, agent.position.x] = 1
 
         map_slice, obs_slice = self.get_map_slice_coords(agent, agent.visible_area.shape[0])
 
@@ -178,8 +179,6 @@ class Map:
         self._total_explored = new_explored
         return new_explored - old_explored
 
-
-
     def get_observation(self, agent, observation_size: int):
         observation = np.zeros((3, observation_size, observation_size), dtype=int)
 
@@ -189,16 +188,32 @@ class Map:
         x_min, x_max, y_min, y_max = map_slice
         map_slice = self.tiles[y_min : y_max, x_min : x_max]
         explored_slice = self._explored_area[y_min : y_max, x_min : x_max]
+        visited_slice = self._trajectory[y_min : y_max, x_min : x_max]
 
         # set by observation slice
         x_min, x_max, y_min, y_max = obs_slice
 
         observation[0, y_min : y_max, x_min : x_max] = map_slice
         observation[1, y_min : y_max, x_min : x_max] = explored_slice
+        observation[2, y_min : y_max, x_min : x_max] = visited_slice
 
 
         # rotate
         observation[0] = np.rot90(observation[0], k=-agent.orientation + 1)
         observation[1] = np.rot90(observation[1], k=-agent.orientation + 1)
+        observation[2] = np.rot90(observation[2], k=-agent.orientation + 1)
 
-        return Map(tiles=observation[0], explored_area=observation[1])
+        x = observation[0] * (1 - observation[1])
+        x = (np.arange(3) == x[...,None]).astype(int).astype(np.float32)
+        x = np.concatenate([x, np.expand_dims(observation[2], axis=-1)], axis=-1)
+
+        return x
+
+        #return Map(tiles=observation[0], explored_area=observation[1], trajectory=observation[2])
+
+    @staticmethod
+    def map_to_numpy(obs):
+        x = obs.tiles * (1 - obs._explored_area)
+        # one-hot
+        x = (np.arange(x.max()) == x[...,None]-1).astype(int)
+        return x

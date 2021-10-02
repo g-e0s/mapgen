@@ -1,5 +1,6 @@
 import math
 import gym
+from gym import spaces
 import numpy as np
 from mapgen.dungeon import DungeonGenerator
 from mapgen.map import Map, Move
@@ -34,6 +35,9 @@ class Dungeon(gym.Env):
         self._agent_pos = None
         self._step = 0
 
+        self.observation_space = spaces.Box(0, 1, [observation_size, observation_size, 3])
+        self.action_space = spaces.Discrete(3)
+
     def reset(self):
 
         """Resets the environment to an initial state and returns an initial
@@ -62,7 +66,7 @@ class Dungeon(gym.Env):
         observation = self._map.get_observation(self._agent, self.observation_size)
         return observation
 
-    def step(self, action: Move):
+    def step(self, action: int):
         
         """Run one timestep of the environment's dynamics. When end of
         episode is reached, you are responsible for calling `reset()`
@@ -79,7 +83,12 @@ class Dungeon(gym.Env):
             done (bool): whether the episode has ended, in which case further step() calls will return undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
-        observation, explored, done = self._map.step(self._agent, action, self.observation_size)
+        action = Move(action-1)
+        observation, explored, done, moved = self._map.step(self._agent, action, self.observation_size)
+
+        # set reward as a number of new explored cells
+        reward = explored
+        reward = (explored - 1) /  self._map._visible_cells
 
         # set reward as a number of new explored cells
         reward = explored
@@ -88,7 +97,8 @@ class Dungeon(gym.Env):
             "total_cells": self._map._visible_cells,
             "total_explored": self._map._total_explored,
             "new_explored": explored,
-            "avg_explored_per_step": self._map._total_explored / self._step
+            "avg_explored_per_step": self._map._total_explored / self._step,
+            "moved": moved
         }
         self._step += 1
 
