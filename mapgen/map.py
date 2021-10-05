@@ -23,7 +23,7 @@ TILES_COLORS = {
     TileKind.FREE: "#d9ad7c",
     TileKind.UNKNOWN: "#a2836e",
     TileKind.AGENT: "#c83349",
-    TileKind.EXPLORED: "#454140"
+    TileKind.EXPLORED: "#fff2df"
 }
 
 @dataclass
@@ -205,11 +205,16 @@ class Map:
 
         x = observation[0] * (1 - observation[1])
         x = (np.arange(3) == x[...,None]).astype(int).astype(np.float32)
-        x = np.concatenate([x, np.expand_dims(observation[2], axis=-1)], axis=-1)
+
+        agent_position = np.zeros_like(observation[2])
+        midpoint = agent_position.shape[0] // 2
+        agent_position[midpoint, midpoint] = 1
+        x = np.concatenate([
+            x,
+            np.expand_dims(observation[2], axis=-1),
+            ], axis=-1).astype(np.float32)
 
         return x
-
-        #return Map(tiles=observation[0], explored_area=observation[1], trajectory=observation[2])
 
     @staticmethod
     def map_to_numpy(obs):

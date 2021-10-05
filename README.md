@@ -16,3 +16,8 @@ for _ in range(1000):
     if done:
         break
 ```
+### Observation layers
+ - Unexplored cells
+ - Free cells
+ - Occupied cells
+ - Visited cells

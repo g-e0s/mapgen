@@ -15,7 +15,8 @@ class Dungeon(gym.Env):
         min_room_xy=10,
         max_room_xy=25,
         observation_size: int = 11,
-        vision_radius: int = 5
+        vision_radius: int = 5,
+        max_steps: int = 2000
     ):
         super().__init__()
         self.width = width
@@ -34,8 +35,9 @@ class Dungeon(gym.Env):
         self._explored_area = None
         self._agent_pos = None
         self._step = 0
+        self._max_steps = max_steps
 
-        self.observation_space = spaces.Box(0, 1, [observation_size, observation_size, 3])
+        self.observation_space = spaces.Box(0, 1, [observation_size, observation_size, 4])
         self.action_space = spaces.Discrete(3)
 
     def reset(self):
@@ -82,16 +84,18 @@ class Dungeon(gym.Env):
             reward (float) : amount of reward returned after previous action
             done (bool): whether the episode has ended, in which case further step() calls will return undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
+              - step: current step number
+              - total_cells: total number of visible cells for current map
+              - total_explored: total number of explored cells (map is solved when total_explored == total_cells)
+              - new_explored: number of explored cells during this step
+              - moved: whether an agent made a move (didn't collide with an obstacle)
         """
         action = Move(action-1)
         observation, explored, done, moved = self._map.step(self._agent, action, self.observation_size)
 
-        # set reward as a number of new explored cells
-        reward = explored
-        reward = (explored - 1) /  self._map._visible_cells
+        # set reward as a fraction of new explored cells (so total reward is 1.0)
+        reward = explored /  self._map._visible_cells
 
-        # set reward as a number of new explored cells
-        reward = explored
         info = {
             "step": self._step,
             "total_cells": self._map._visible_cells,
@@ -102,7 +106,7 @@ class Dungeon(gym.Env):
         }
         self._step += 1
 
-        return observation, reward, done, info
+        return observation, reward , done or self._step == self._max_steps, info
 
 
     def render(self, mode='human'):
