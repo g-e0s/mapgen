@@ -122,10 +122,12 @@ class Map:
             agent.orientation = orientation
             moved = True
 
+        is_new = int(not self._trajectory[agent.position.y, agent.position.x])
+
         explored = self.update_explored_area(agent, align_with_map=True)
         success = self._total_explored == self._visible_cells
         obs = self.get_observation(agent, observation_size)
-        return obs, explored, success, moved
+        return obs, explored, success, moved, is_new
 
 
     def get_random_free_position(self) -> Tuple[int, int]:

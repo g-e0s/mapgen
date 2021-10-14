@@ -91,7 +91,7 @@ class Dungeon(gym.Env):
               - moved: whether an agent made a move (didn't collide with an obstacle)
         """
         action = Move(action-1)
-        observation, explored, done, moved = self._map.step(self._agent, action, self.observation_size)
+        observation, explored, done, moved, is_new = self._map.step(self._agent, action, self.observation_size)
 
         # set reward as a fraction of new explored cells (so total reward is 1.0)
         reward = explored /  self._map._visible_cells
@@ -102,7 +102,8 @@ class Dungeon(gym.Env):
             "total_explored": self._map._total_explored,
             "new_explored": explored,
             "avg_explored_per_step": self._map._total_explored / self._step,
-            "moved": moved
+            "moved": moved,
+            "is_new": is_new
         }
         self._step += 1
 
