@@ -194,7 +194,7 @@ class DungeonGenerator():
 
 
     def gen_level(self):
-
+        self.level = []
         # build an empty dungeon, blank the room and corridor lists
         for i in range(self.height):
             self.level.append([TileKind.UNKNOWN] * self.width)

@@ -1,7 +1,10 @@
-import math
 import gym
-from gym import spaces
+import math
+import random
 import numpy as np
+from gym import spaces
+
+from PIL import Image
 from mapgen.dungeon import DungeonGenerator
 from mapgen.map import Map, Move
 from mapgen.agent import Agent, Position, Orientation
@@ -41,7 +44,6 @@ class Dungeon(gym.Env):
         self.action_space = spaces.Discrete(3)
 
     def reset(self):
-
         """Resets the environment to an initial state and returns an initial
         observation.
 
@@ -55,7 +57,6 @@ class Dungeon(gym.Env):
             observation (object): the initial observation.
         """
         # generate level
-
         self._gen.gen_level()
         self._map = Map(self._gen.level)
 
@@ -69,7 +70,6 @@ class Dungeon(gym.Env):
         return observation
 
     def step(self, action: int):
-        
         """Run one timestep of the environment's dynamics. When end of
         episode is reached, you are responsible for calling `reset()`
         to reset this environment's state.
@@ -91,7 +91,7 @@ class Dungeon(gym.Env):
               - moved: whether an agent made a move (didn't collide with an obstacle)
         """
         action = Move(action-1)
-        observation, explored, done, moved = self._map.step(self._agent, action, self.observation_size)
+        observation, explored, done, moved, is_new = self._map.step(self._agent, action, self.observation_size)
 
         # set reward as a fraction of new explored cells (so total reward is 1.0)
         reward = explored /  self._map._visible_cells
@@ -102,14 +102,14 @@ class Dungeon(gym.Env):
             "total_explored": self._map._total_explored,
             "new_explored": explored,
             "avg_explored_per_step": self._map._total_explored / self._step,
-            "moved": moved
+            "moved": moved,
+            "is_new": is_new
         }
         self._step += 1
 
-        return observation, reward , done or self._step == self._max_steps, info
+        return observation, reward, done or self._step == self._max_steps, info
 
-
-    def render(self, mode='human'):
+    def render(self, mode='rgb_array', size=None):
         """Renders the environment.
 
         The set of supported modes varies per environment. (And some
@@ -121,34 +121,26 @@ class Dungeon(gym.Env):
         - rgb_array: Return an numpy.ndarray with shape (x, y, 3),
           representing RGB values for an x-by-y pixel image, suitable
           for turning into a video.
-        - ansi: Return a string (str) or StringIO.StringIO containing a
-          terminal-style text representation. The text can include newlines
-          and ANSI escape sequences (e.g. for colors).
-
-        Note:
-            Make sure that your class's metadata 'render.modes' key includes
-              the list of supported modes. It's recommended to call super()
-              in implementations to use the functionality of this method.
 
         Args:
             mode (str): the mode to render with
 
-        Example:
-
-        class MyEnv(Env):
-            metadata = {'render.modes': ['human', 'rgb_array']}
-
-            def render(self, mode='human'):
-                if mode == 'rgb_array':
-                    return np.array(...) # return RGB frame suitable for video
-                elif mode == 'human':
-                    ... # pop up a window and render
-                else:
-                    super(MyEnv, self).render(mode=mode) # just raise an exception
         """
         if mode == "rgb_array":
-            raise NotImplementedError
+            render_img = Image.fromarray(self._map.render(self._agent))
+
+            if size is not None:
+                render_img = render_img.resize((size, size), Image.NEAREST)
+
+            return np.asarray(render_img)
         elif mode == "human":
             print(f"Step {self._step}")
             print(self._map.show(self._agent))
             print(f"Explored: {self._map._total_explored}/{self._map._visible_cells} cells ({self._map._total_explored / self._map._visible_cells * 100:.2f}%)")
+        else:
+            raise RuntimeError(f"Unknown render mode, expected one of ['human', 'rgb_array']. Got: {mode}")
+
+    def seed(self, seed=None):
+        random.seed(seed)
+        np.random.seed(seed)
+        self.action_space.seed(seed)
