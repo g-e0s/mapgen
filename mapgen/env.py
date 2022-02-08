@@ -11,7 +11,8 @@ from mapgen.agent import Agent, Position, Orientation
 
 
 class Dungeon(gym.Env):
-    def __init__(self,
+    def __init__(
+        self,
         width=64,
         height=64,
         max_rooms=25,
@@ -19,7 +20,7 @@ class Dungeon(gym.Env):
         max_room_xy=25,
         observation_size: int = 11,
         vision_radius: int = 5,
-        max_steps: int = 2000
+        max_steps: int = 2000,
     ):
         super().__init__()
         self.width = width
@@ -62,7 +63,12 @@ class Dungeon(gym.Env):
 
         # place agent
         x, y = self._map.get_random_free_position()
-        self._agent = Agent(Position(x, y), Orientation(np.random.randint(4)), vision_radius=self.vision_radius, vision_angle=math.pi / 2)
+        self._agent = Agent(
+            Position(x, y),
+            Orientation(np.random.randint(4)),
+            vision_radius=self.vision_radius,
+            vision_angle=math.pi / 2,
+        )
         _ = self._map.update_explored_area(self._agent, align_with_map=True)
         self._step = 1
 
@@ -90,11 +96,11 @@ class Dungeon(gym.Env):
               - new_explored: number of explored cells during this step
               - moved: whether an agent made a move (didn't collide with an obstacle)
         """
-        action = Move(action-1)
+        action = Move(action - 1)
         observation, explored, done, moved, is_new = self._map.step(self._agent, action, self.observation_size)
 
         # set reward as a fraction of new explored cells (so total reward is 1.0)
-        reward = explored /  self._map._visible_cells
+        reward = explored / self._map._visible_cells
 
         info = {
             "step": self._step,
@@ -103,13 +109,13 @@ class Dungeon(gym.Env):
             "new_explored": explored,
             "avg_explored_per_step": self._map._total_explored / self._step,
             "moved": moved,
-            "is_new": is_new
+            "is_new": is_new,
         }
         self._step += 1
 
         return observation, reward, done or self._step == self._max_steps, info
 
-    def render(self, mode='rgb_array', size=None):
+    def render(self, mode="rgb_array", size=None):
         """Renders the environment.
 
         The set of supported modes varies per environment. (And some
@@ -136,7 +142,9 @@ class Dungeon(gym.Env):
         elif mode == "human":
             print(f"Step {self._step}")
             print(self._map.show(self._agent))
-            print(f"Explored: {self._map._total_explored}/{self._map._visible_cells} cells ({self._map._total_explored / self._map._visible_cells * 100:.2f}%)")
+            print(
+                f"Explored: {self._map._total_explored}/{self._map._visible_cells} cells ({self._map._total_explored / self._map._visible_cells * 100:.2f}%)"
+            )
         else:
             raise RuntimeError(f"Unknown render mode, expected one of ['human', 'rgb_array']. Got: {mode}")
 

@@ -28,13 +28,13 @@ class Move(IntEnum):
     TURN_RIGHT = -1
 
 
-
 class Agent:
-    def __init__(self,
+    def __init__(
+        self,
         position: Position,
         orientation: Orientation,
         vision_radius: float = 5.0,
-        vision_angle: float = math.pi / 2
+        vision_angle: float = math.pi / 2,
     ):
         self.position = position
         self.orientation = orientation
@@ -46,7 +46,6 @@ class Agent:
     @property
     def visible_area(self) -> np.ndarray:
         return np.rot90(self._visible_area_canonical, k=int(self.orientation))
-
 
     def _construct_canonical_visible_area(self) -> np.ndarray:
         # set area
@@ -61,13 +60,20 @@ class Agent:
 
         # limit by vision angle
         if self._vision_angle <= math.pi:
-            fov_area_pos = ((xs[None, :] - x0) * math.tan(self._vision_angle / 2) >= ys[:, None] - y0)  & (ys[:, None] - y0 >= 0)
-            fov_area_neg = ((xs[None, :] - x0) * math.tan(-self._vision_angle / 2) <= ys[:, None] - y0)  & (ys[:, None] - y0 < 0)
+            fov_area_pos = ((xs[None, :] - x0) * math.tan(self._vision_angle / 2) >= ys[:, None] - y0) & (
+                ys[:, None] - y0 >= 0
+            )
+            fov_area_neg = ((xs[None, :] - x0) * math.tan(-self._vision_angle / 2) <= ys[:, None] - y0) & (
+                ys[:, None] - y0 < 0
+            )
 
         else:
 
-            fov_area_pos = ((xs[None, :] - x0) * math.tan(self._vision_angle / 2) <= ys[:, None] - y0)  & (ys[:, None] - y0 >= 0)
-            fov_area_neg = ((xs[None, :] - x0) * math.tan(-self._vision_angle / 2) >= ys[:, None] - y0)  & (ys[:, None] - y0 < 0)
-
+            fov_area_pos = ((xs[None, :] - x0) * math.tan(self._vision_angle / 2) <= ys[:, None] - y0) & (
+                ys[:, None] - y0 >= 0
+            )
+            fov_area_neg = ((xs[None, :] - x0) * math.tan(-self._vision_angle / 2) >= ys[:, None] - y0) & (
+                ys[:, None] - y0 < 0
+            )
 
         return x | (inside_area & (fov_area_pos | fov_area_neg))
